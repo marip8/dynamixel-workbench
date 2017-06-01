@@ -8,6 +8,7 @@ project(dynamixel_workbench_msgs)
 # Packages
 ################################################################################
 find_package(catkin REQUIRED COMPONENTS
+  genmsg
   message_generation
   std_msgs
 )
@@ -55,7 +56,7 @@ generate_messages(
 # Catkin specific configuration
 ################################################################################
 catkin_package(
-   CATKIN_DEPENDS std_msgs message_generation
+   CATKIN_DEPENDS std_msgs genmsg message_runtime
 )
 
 ################################################################################

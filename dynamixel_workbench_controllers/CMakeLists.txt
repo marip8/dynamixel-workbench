@@ -36,24 +36,20 @@ catkin_package(
 # Build
 ################################################################################
 include_directories(
-  ${catkin_INCLUDE_DIRS}
   include
+  ${catkin_INCLUDE_DIRS}
 )
 
 add_executable(dynamixel_workbench_position_control src/dynamixel_workbench_position_control.cpp)
-add_dependencies(dynamixel_workbench_position_control ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(dynamixel_workbench_position_control ${catkin_LIBRARIES})
 
 add_executable(dynamixel_workbench_velocity_control src/dynamixel_workbench_velocity_control.cpp)
-add_dependencies(dynamixel_workbench_velocity_control ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(dynamixel_workbench_velocity_control ${catkin_LIBRARIES})
 
 add_executable(dynamixel_workbench_multi_port src/dynamixel_workbench_multi_port.cpp)
-add_dependencies(dynamixel_workbench_multi_port ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(dynamixel_workbench_multi_port ${catkin_LIBRARIES})
 
 add_executable(dynamixel_workbench_torque_control src/dynamixel_workbench_torque_control.cpp)
-add_dependencies(dynamixel_workbench_torque_control ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(dynamixel_workbench_torque_control ${catkin_LIBRARIES})
 
 ################################################################################

@@ -36,12 +36,11 @@ catkin_package(
 # Build
 ################################################################################
 include_directories(
-  ${catkin_INCLUDE_DIRS}
   include
+  ${catkin_INCLUDE_DIRS}
 )
 
 add_executable(dynamixel_workbench_single_manager src/dynamixel_workbench_single_manager.cpp)
-add_dependencies(dynamixel_workbench_single_manager ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(dynamixel_workbench_single_manager ${catkin_LIBRARIES})
 
 ################################################################################
