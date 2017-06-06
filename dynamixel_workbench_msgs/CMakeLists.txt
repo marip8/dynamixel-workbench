@@ -11,6 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   genmsg
   message_generation
   std_msgs
+  sensor_msgs
+  actionlib_msgs
 )
 
 ################################################################################
@@ -41,11 +43,18 @@ add_service_files(
   SetPosition.srv
   SetDirection.srv
   GetWorkbenchParam.srv
+  MoveToPosition.srv
 )
+
+add_action_files(
+    DIRECTORY action 
+    FILES MoveToPosition.action)
 
 generate_messages(
   DEPENDENCIES
   std_msgs
+  sensor_msgs
+  actionlib_msgs
 )
 
 ################################################################################

@@ -1,0 +1,11 @@
+# Goal State
+sensor_msgs/JointState goal_state     # desired position and velocities (radians and radians/sec)
+float64[] position_tolerance          # radians
+float64 max_duration                  # max duration in seconds
+---
+# Result
+bool success
+sensor_msgs/JointState final_state    # final position 
+---
+# Feedback
+sensor_msgs/JointState current_state  # current position and velocities (radians and radians/sec)

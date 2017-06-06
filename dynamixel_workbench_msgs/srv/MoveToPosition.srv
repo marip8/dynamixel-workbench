@@ -1,0 +1,7 @@
+# Goal State
+sensor_msgs/JointState goal_state
+float64[] position_tolerance
+float64 max_duration
+---
+bool success
+sensor_msgs/JointState final_state
