@@ -164,14 +164,14 @@ namespace dynamixel_workbench_single_manager
 DynamixelDriver::DynamixelDriver(const std::string& device_name,
                                  const int baud_rate,
                                  const double publish_rate,
-                                 const std::string& frame):
+                                 const std::string& joint):
     device_name_(device_name),
     baud_rate_(baud_rate),
     publish_rate_(publish_rate),
     polling_rate_(MAX_MOTOR_POLLING_RATE),
     motor_busy_(false),
     motor_ok_(true),
-    frame_(frame)
+    joint_(joint)
 {
 
 
@@ -417,10 +417,10 @@ bool DynamixelDriver::initROS()
   poll_motor_timer_ = nh_.createTimer(ros::Duration(1.0/polling_rate_),&DynamixelDriver::pollMotor,this);
 
   // set name field of joint state message
-  if(!frame_.empty())
+  if(!joint_.empty())
   {
     joint_st_.name.resize(1);
-    joint_st_.name.front() = frame_;
+    joint_st_.name.front() = joint_;
   }
 
   return true;
@@ -993,14 +993,14 @@ int main(int argc,char** argv)
   double publish_rate; // hz
   int baud_rate;
   std::string device_id;
-  std::string frame;
+  std::string joint;
   ph.param("publish_rate",publish_rate,50.0);
   ph.param("baud_rate",baud_rate,2000000);
   ph.param("device_id",device_id,std::string("/dev/ttyUSB0"));
-  ph.param("frame", frame, std::string(""));
+  ph.param("joint", joint, std::string(""));
 
   spinner.start();
-  dynamixel_workbench_single_manager::DynamixelDriver d(device_id, baud_rate, publish_rate, frame);
+  dynamixel_workbench_single_manager::DynamixelDriver d(device_id, baud_rate, publish_rate, joint);
   if(d.run())
   {
     ros::waitForShutdown();
