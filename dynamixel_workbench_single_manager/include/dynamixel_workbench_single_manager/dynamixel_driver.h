@@ -59,7 +59,11 @@ namespace dynamixel_workbench_single_manager
 class DynamixelDriver
 {
 public:
-  DynamixelDriver(std::string device_name, int baud_rate, double publish_rate);
+  DynamixelDriver(const std::string& device_name,
+                  const int baud_rate,
+                  const double publish_rate,
+                  const std::string& joint);
+
   virtual ~DynamixelDriver();
 
   bool run();
@@ -104,6 +108,7 @@ protected:
  std::atomic<bool> motor_busy_;
  std::mutex joint_st_mutex_;
  sensor_msgs::JointState joint_st_;
+ std::string joint_name_;
 
  // health
  std::atomic<bool> motor_ok_;

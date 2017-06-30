@@ -161,13 +161,17 @@ bool verifyBaudRate(int br)
 namespace dynamixel_workbench_single_manager
 {
 
-DynamixelDriver::DynamixelDriver(std::string device_name, int baud_rate,double publish_rate):
+DynamixelDriver::DynamixelDriver(const std::string& device_name,
+                                 const int baud_rate,
+                                 const double publish_rate,
+                                 const std::string& joint):
     device_name_(device_name),
     baud_rate_(baud_rate),
     publish_rate_(publish_rate),
     polling_rate_(MAX_MOTOR_POLLING_RATE),
     motor_busy_(false),
-    motor_ok_(true)
+    motor_ok_(true),
+    joint_name_(joint)
 {
 
 
@@ -406,11 +410,22 @@ bool DynamixelDriver::initROS()
   {
     joint_st_pub_.publish(getJointState());
   };
-//  publish_joint_st_timer_ = nh_.createTimer(period,&DynamixelDriver::publishMessagesCallback,this);
+  //  publish_joint_st_timer_ = nh_.createTimer(period,&DynamixelDriver::publishMessagesCallback,this);
   publish_joint_st_timer_ = nh_.createTimer(period,publish_js_callback);
 
   // poll motor timer
   poll_motor_timer_ = nh_.createTimer(ros::Duration(1.0/polling_rate_),&DynamixelDriver::pollMotor,this);
+
+  // set name field of joint state message
+  if(!joint_name_.empty())
+  {
+    joint_st_.name.resize(1);
+    joint_st_.name.front() = joint_name_;
+  }
+  else
+  {
+    ROS_WARN("No joint name specified for JointState message");
+  }
 
   return true;
 }
@@ -982,12 +997,14 @@ int main(int argc,char** argv)
   double publish_rate; // hz
   int baud_rate;
   std::string device_id;
+  std::string joint_name;
   ph.param("publish_rate",publish_rate,50.0);
   ph.param("baud_rate",baud_rate,2000000);
   ph.param("device_id",device_id,std::string("/dev/ttyUSB0"));
+  ph.param("joint_name", joint_name, std::string("dynamixel_joint"));
 
   spinner.start();
-  dynamixel_workbench_single_manager::DynamixelDriver d(device_id,baud_rate,publish_rate);
+  dynamixel_workbench_single_manager::DynamixelDriver d(device_id, baud_rate, publish_rate, joint_name);
   if(d.run())
   {
     ros::waitForShutdown();
