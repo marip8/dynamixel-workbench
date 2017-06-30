@@ -171,7 +171,7 @@ DynamixelDriver::DynamixelDriver(const std::string& device_name,
     polling_rate_(MAX_MOTOR_POLLING_RATE),
     motor_busy_(false),
     motor_ok_(true),
-    joint_(joint)
+    joint_name_(joint)
 {
 
 
@@ -417,10 +417,14 @@ bool DynamixelDriver::initROS()
   poll_motor_timer_ = nh_.createTimer(ros::Duration(1.0/polling_rate_),&DynamixelDriver::pollMotor,this);
 
   // set name field of joint state message
-  if(!joint_.empty())
+  if(!joint_name_.empty())
   {
     joint_st_.name.resize(1);
-    joint_st_.name.front() = joint_;
+    joint_st_.name.front() = joint_name_;
+  }
+  else
+  {
+    ROS_WARN("No joint name specified for JointState message");
   }
 
   return true;
@@ -993,14 +997,14 @@ int main(int argc,char** argv)
   double publish_rate; // hz
   int baud_rate;
   std::string device_id;
-  std::string joint;
+  std::string joint_name;
   ph.param("publish_rate",publish_rate,50.0);
   ph.param("baud_rate",baud_rate,2000000);
   ph.param("device_id",device_id,std::string("/dev/ttyUSB0"));
-  ph.param("joint", joint, std::string(""));
+  ph.param("joint_name", joint_name, std::string("dynamixel_joint"));
 
   spinner.start();
-  dynamixel_workbench_single_manager::DynamixelDriver d(device_id, baud_rate, publish_rate, joint);
+  dynamixel_workbench_single_manager::DynamixelDriver d(device_id, baud_rate, publish_rate, joint_name);
   if(d.run())
   {
     ros::waitForShutdown();

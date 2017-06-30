@@ -108,7 +108,7 @@ protected:
  std::atomic<bool> motor_busy_;
  std::mutex joint_st_mutex_;
  sensor_msgs::JointState joint_st_;
- std::string joint_;
+ std::string joint_name_;
 
  // health
  std::atomic<bool> motor_ok_;
