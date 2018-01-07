@@ -128,8 +128,8 @@ protected:
 
 
  // support methods
- bool read(const std::string& prop,int64_t *value);
- bool write(const std::string& prop,int64_t value);
+ bool read(const std::string& prop,int64_t *value, int retries = 0);
+ bool write(const std::string& prop,int64_t value, int retries = 0);
  bool writeDynamixelRegister(uint8_t id, uint16_t addr, uint8_t length, int64_t value);
  bool readDynamixelRegister(uint8_t id, uint16_t addr, uint8_t length, int64_t *value);
 

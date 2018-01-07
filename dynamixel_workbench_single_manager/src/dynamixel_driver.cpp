@@ -548,7 +548,7 @@ bool DynamixelDriver::stopMotor()
   return true;
 }
 
-bool DynamixelDriver::moveMotor(double goal_pos,double goal_speed, double pos_tolerance, double max_duration)
+bool DynamixelDriver::moveMotor(double goal_pos, double goal_speed, double pos_tolerance, double max_duration)
 {
   if(motor_busy_)
   {
@@ -592,7 +592,8 @@ bool DynamixelDriver::moveMotor(double goal_pos,double goal_speed, double pos_to
   }
 
   int64_t max_motor_vel;
-  if(read("velocity_limit",&max_motor_vel))
+  const static int n_retries = 2;
+  if(read("velocity_limit",&max_motor_vel, n_retries))
   {
     double max_speed = motorSpeedToAngularSpeed(*dynamixel_,max_motor_vel);
     if(max_speed < goal_speed)
@@ -696,14 +697,14 @@ bool DynamixelDriver::moveMotor(double goal_pos,double goal_speed, double pos_to
 
   // send speed and position to motor
   int64_t val = angularSpeedtoMotorSpeed(*dynamixel_,goal_speed);
-  if(!write("goal_velocity", val))
+  if(!write("goal_velocity", val, n_retries))
   {
     ROS_ERROR("Failed to write property '%s'","goal_velocity");
     return false;
   }
 
   val = radiansToMotorPos(*dynamixel_,goal_pos);
-  if(!write("goal_position", val))
+  if(!write("goal_position", val, n_retries))
   {
     ROS_ERROR("Failed to write property '%s'","goal_position");
     return false;
@@ -840,19 +841,21 @@ void DynamixelDriver::dynamixelCommandMsgCallback(const dynamixel_workbench_msgs
   }
 }
 
-bool DynamixelDriver::read(const std::string& prop,int64_t *value)
+bool DynamixelDriver::read(const std::string& prop,int64_t *value, int retries)
 {
 
   bool success = false;
   if(dynamixel_->ctrl_table_.count(prop)> 0)
   {
     dynamixel_->item_ = dynamixel_->ctrl_table_[prop];
-    if(readDynamixelRegister(dynamixel_->id_,
-                              dynamixel_->item_->address,
-                              dynamixel_->item_->data_length, value))
+    do
     {
-      success = true;
-    }
+      if(readDynamixelRegister(dynamixel_->id_, dynamixel_->item_->address, dynamixel_->item_->data_length, value))
+      {
+        success = true;
+        break;
+      }
+    } while (retries-- > 0);
   }
   else
   {
@@ -862,18 +865,20 @@ bool DynamixelDriver::read(const std::string& prop,int64_t *value)
   return success;
 }
 
-bool DynamixelDriver::write(const std::string& prop,int64_t value)
+bool DynamixelDriver::write(const std::string& prop, int64_t value, int retries)
 {
   bool success = false;
   if(dynamixel_->ctrl_table_.count(prop)> 0)
   {
     dynamixel_->item_ = dynamixel_->ctrl_table_[prop];
-    if(writeDynamixelRegister(dynamixel_->id_,
-                              dynamixel_->item_->address,
-                              dynamixel_->item_->data_length, value))
+    do
     {
-      success = true;
-    }
+      if(writeDynamixelRegister(dynamixel_->id_, dynamixel_->item_->address, dynamixel_->item_->data_length, value))
+      {
+        success = true;
+        break;
+      }
+    } while (retries-- > 0);
   }
   else
   {
