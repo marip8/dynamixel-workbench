@@ -86,7 +86,7 @@ static const std::string DYNAMIXEL_DRIVER_NS = "dynamixel_driver";
 static const std::string MOVE_TO_POSITION_SRV = "move_to_position";
 static const std::string MOVE_TO_POSITION_ACTION = "move_motor";
 
-
+const static int DEFAULT_RETRIES = 2;
 
 
 double motorPosToRadians(const dynamixel_tool::DynamixelTool& motor, int64_t pos)
@@ -318,44 +318,45 @@ bool DynamixelDriver::initDynamixel()
   ROS_DEBUG_STREAM_NAMED(DYNAMIXEL_DRIVER_NS,ss.str());
 
   // disabling motion
-  if(!write("torque_enable", false))
+  if(!write("torque_enable", false, DEFAULT_RETRIES))
   {
     return false;
   }
 
   // initializing operating_mode to position control
   int64_t val;
-  if(read("operating_mode",&val) && val == dynamixel_operating_modes::POSITION_CONTROL_MODE)
+  if(read("operating_mode", &val, DEFAULT_RETRIES) && val == dynamixel_operating_modes::POSITION_CONTROL_MODE)
   {
     ROS_DEBUG("Position control mode already set");
   }
   else
   {
-    if(!write("operating_mode", dynamixel_operating_modes::POSITION_CONTROL_MODE))
+    if(!write("operating_mode", dynamixel_operating_modes::POSITION_CONTROL_MODE, DEFAULT_RETRIES))
     {
       return false;
     }
   }
 
   // motor limits
-  if(!write("velocity_limit",MOTOR_VEL_LIMIT) && !write("acceleration_limit",MOTOR_ACC_LIMIT) )
+  if(!write("velocity_limit", MOTOR_VEL_LIMIT, DEFAULT_RETRIES) &&
+     !write("acceleration_limit", MOTOR_ACC_LIMIT, DEFAULT_RETRIES))
   {
     return false;
   }
 
   // enabling motion
-  if(!write("torque_enable", true))
+  if(!write("torque_enable", true, DEFAULT_RETRIES))
   {
     return false;
   }
 
   // acceleration
-  if(!write("goal_acceleration",0))
+  if(!write("goal_acceleration", 0, DEFAULT_RETRIES))
   {
     return false;
   }
 
-  if(!write("goal_torque",0))
+  if(!write("goal_torque", 0, DEFAULT_RETRIES))
   {
     return false;
   }
@@ -370,7 +371,7 @@ void DynamixelDriver::shutdownDynamixel()
 {
   if(dynamixel_)
   {
-    write("torque_enable", false);
+    write("torque_enable", false, DEFAULT_RETRIES);
   }
   dynamixel_.reset();
   portHandler_->closePort();
@@ -405,16 +406,16 @@ bool DynamixelDriver::initROS()
   {
     ROS_WARN("The joint state publishing rate is greater the the motor polling rate");
   }
-  ros::Duration period(1.0f/publish_rate_);
-  auto publish_js_callback = [this](const ros::TimerEvent& evnt)
+  auto publish_js_callback = [this](const ros::TimerEvent&)
   {
     joint_st_pub_.publish(getJointState());
   };
-  //  publish_joint_st_timer_ = nh_.createTimer(period,&DynamixelDriver::publishMessagesCallback,this);
-  publish_joint_st_timer_ = nh_.createTimer(period,publish_js_callback);
+
+  ros::Duration period(1.0f/publish_rate_);
+  publish_joint_st_timer_ = nh_.createTimer(period, publish_js_callback);
 
   // poll motor timer
-  poll_motor_timer_ = nh_.createTimer(ros::Duration(1.0/polling_rate_),&DynamixelDriver::pollMotor,this);
+  poll_motor_timer_ = nh_.createTimer(ros::Rate(polling_rate_), &DynamixelDriver::pollMotor, this);
 
   // set name field of joint state message
   if(!joint_name_.empty())
@@ -516,7 +517,7 @@ void DynamixelDriver::pollMotor(const ros::TimerEvent& e)
 
 
 bool DynamixelDriver::getWorkbenchParamCallback(dynamixel_workbench_msgs::GetWorkbenchParam::Request &req,
-                                                   dynamixel_workbench_msgs::GetWorkbenchParam::Response &res)
+                                                dynamixel_workbench_msgs::GetWorkbenchParam::Response &res)
 {
   res.workbench_parameter.device_name = device_name_;
   res.workbench_parameter.baud_rate = portHandler_->getBaudRate();
@@ -530,17 +531,17 @@ bool DynamixelDriver::getWorkbenchParamCallback(dynamixel_workbench_msgs::GetWor
 
 bool DynamixelDriver::stopMotor()
 {
-  if(!write("goal_velocity", 0))
+  if(!write("goal_velocity", 0, DEFAULT_RETRIES))
   {
     ROS_ERROR("Failed to write property '%s'","goal_velocity");
   }
 
-  if(!write("torque_enable", false))
+  if(!write("torque_enable", false, DEFAULT_RETRIES))
   {
     return false;
   }
 
-  if(!write("torque_enable", true))
+  if(!write("torque_enable", true, DEFAULT_RETRIES))
   {
     return false;
   }
@@ -592,8 +593,7 @@ bool DynamixelDriver::moveMotor(double goal_pos, double goal_speed, double pos_t
   }
 
   int64_t max_motor_vel;
-  const static int n_retries = 2;
-  if(read("velocity_limit",&max_motor_vel, n_retries))
+  if(read("velocity_limit",&max_motor_vel, DEFAULT_RETRIES))
   {
     double max_speed = motorSpeedToAngularSpeed(*dynamixel_,max_motor_vel);
     if(max_speed < goal_speed)
@@ -697,14 +697,14 @@ bool DynamixelDriver::moveMotor(double goal_pos, double goal_speed, double pos_t
 
   // send speed and position to motor
   int64_t val = angularSpeedtoMotorSpeed(*dynamixel_,goal_speed);
-  if(!write("goal_velocity", val, n_retries))
+  if(!write("goal_velocity", val, DEFAULT_RETRIES))
   {
     ROS_ERROR("Failed to write property '%s'","goal_velocity");
     return false;
   }
 
   val = radiansToMotorPos(*dynamixel_,goal_pos);
-  if(!write("goal_position", val, n_retries))
+  if(!write("goal_position", val, DEFAULT_RETRIES))
   {
     ROS_ERROR("Failed to write property '%s'","goal_position");
     return false;
@@ -721,7 +721,7 @@ bool DynamixelDriver::moveMotor(double goal_pos, double goal_speed, double pos_t
 
 
 bool DynamixelDriver::moveToPositionCallback(dynamixel_workbench_msgs::MoveToPosition::Request& req,
-                            dynamixel_workbench_msgs::MoveToPosition::Response& res)
+                                             dynamixel_workbench_msgs::MoveToPosition::Response& res)
 {
   double goal_pos = req.goal_state.position.front();
   double goal_speed = req.goal_state.velocity.front();
@@ -747,18 +747,16 @@ void DynamixelDriver::moveToPosActionCallback(const dynamixel_workbench_msgs::Mo
   typedef std::shared_ptr<MoveActionServer> MoveActionServerPtr;
 
   // define timer callback
-  auto timer_funct = [this](const ros::TimerEvent& evnt)
+  auto timer_funct = [this](const ros::TimerEvent&)
   {
     MoveActionServerPtr as = this->move_to_position_action_server_;
 
     if(as->isPreemptRequested())
     {
-      ROS_DEBUG_NAMED(DYNAMIXEL_DRIVER_NS,"Dynamixel goal canceled");
+      ROS_DEBUG_NAMED(DYNAMIXEL_DRIVER_NS, "Dynamixel goal canceled");
       motor_motion_canceled_= true;
       return;
     }
-
-    sensor_msgs::JointState st = getJointState();
 
     MoveToPositionFeedback feedback;
     feedback.current_state = getJointState();
