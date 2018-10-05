@@ -913,15 +913,15 @@ bool DynamixelDriver::writeDynamixelRegister(uint8_t id, uint16_t addr, uint8_t 
   {
     if (dynamixel_error != 0)
     {
-      packetHandler_->printRxPacketError(dynamixel_error);
+      std::string error_desc = packetHandler_->getRxPacketError(dynamixel_error);
+      ROS_ERROR("Write completed with error %s",error_desc.c_str());
       return false;
     }
     return true;
   }
   else
   {
-    packetHandler_->printTxRxResult(dynamixel_comm_result);
-    ROS_ERROR("[ID] %u, Fail to write!", id);
+    ROS_ERROR("[ID] %u, Fail to write with error %u!", id, dynamixel_error);
     return false;
   }
   return true;
@@ -958,7 +958,8 @@ bool DynamixelDriver::readDynamixelRegister(uint8_t id, uint16_t addr, uint8_t l
   {
     if (dynamixel_error != 0)
     {
-      packetHandler_->printRxPacketError(dynamixel_error);
+      std::string error_desc = packetHandler_->getRxPacketError(dynamixel_error);
+      ROS_ERROR("Write completed with error %s",error_desc.c_str());
       return false;
     }
 
