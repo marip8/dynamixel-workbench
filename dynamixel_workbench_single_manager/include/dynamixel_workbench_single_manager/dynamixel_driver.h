@@ -133,8 +133,14 @@ protected:
  bool writeDynamixelRegister(uint8_t id, uint16_t addr, uint8_t length, int64_t value);
  bool readDynamixelRegister(uint8_t id, uint16_t addr, uint8_t length, int64_t *value);
 
- bool moveMotor(double goal_pos,double goal_speed, double pos_tolerance, double max_duration);
- bool stopMotor();
+ bool moveMotor(const double goal_pos,
+                const double goal_speed,
+                double pos_tolerance,
+                const double max_duration);
+
+ bool stopMotor(const double current_goal_position,
+                const double current_goal_speed,
+                const ros::Duration& decel_time = ros::Duration(0.5));
 
  // callbacks
  void pollMotor(const ros::TimerEvent& e);

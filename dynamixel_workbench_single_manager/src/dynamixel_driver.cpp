@@ -529,11 +529,48 @@ bool DynamixelDriver::getWorkbenchParamCallback(dynamixel_workbench_msgs::GetWor
   return true;
 }
 
-bool DynamixelDriver::stopMotor()
+bool DynamixelDriver::stopMotor(const double current_goal_position,
+                                const double current_goal_speed,
+                                const ros::Duration& decel_time)
 {
+  ros::Duration delay = ros::Duration(WAIT_POLL_DELAY);
+  const unsigned n_steps = static_cast<unsigned>(decel_time.toSec() / delay.toSec());
+
+  // Get the current joint state
+  auto js = getJointState();
+
+  // Set a new goal position considering the current velocity and the amount of time it takes to slow down
+  double extra_position = (3.0 * current_goal_speed * decel_time.toSec()) / 2.0;
+  if(current_goal_position - js.position.front() < 0.0)
+  {
+    extra_position *= -1;
+  }
+  double goal_position = radiansToMotorPos(*dynamixel_, js.position.front() + extra_position);
+  if(!write("goal_position", goal_position))
+  {
+    ROS_ERROR("Failed to write property '%s'","goal_position");
+    return false;
+  }
+
+  // Gradually slow down the motor velocity
+  for(unsigned i = 0; i < n_steps; ++i)
+  {
+    double pct = 1.0 - (static_cast<double>(i + 1) / static_cast<double>(n_steps));
+    double val = angularSpeedtoMotorSpeed(*dynamixel_, current_goal_speed * pct);
+
+    if(!write("goal_velocity", val))
+    {
+      ROS_ERROR("Failed to write property '%s'","goal_velocity");
+    }
+
+    delay.sleep();
+  }
+
+  // Set the goal velocity to zero
   if(!write("goal_velocity", 0, DEFAULT_RETRIES))
   {
     ROS_ERROR("Failed to write property '%s'","goal_velocity");
+    return false;
   }
 
   if(!write("torque_enable", false, DEFAULT_RETRIES))
@@ -549,7 +586,10 @@ bool DynamixelDriver::stopMotor()
   return true;
 }
 
-bool DynamixelDriver::moveMotor(double goal_pos, double goal_speed, double pos_tolerance, double max_duration)
+bool DynamixelDriver::moveMotor(const double goal_pos,
+                                const double goal_speed,
+                                double pos_tolerance,
+                                const double max_duration)
 {
   if(motor_busy_)
   {
@@ -647,7 +687,7 @@ bool DynamixelDriver::moveMotor(double goal_pos, double goal_speed, double pos_t
 
       if(motor_motion_canceled_)
       {
-        stopMotor();
+        stopMotor(goal_pos, goal_speed, ros::Duration(0.5));
         return false;
       }
 
@@ -691,7 +731,7 @@ bool DynamixelDriver::moveMotor(double goal_pos, double goal_speed, double pos_t
   if(std::abs(goal_speed) < 1e-6 )
   {
     ROS_DEBUG_NAMED(DYNAMIXEL_DRIVER_NS,"Dynamixel received a '0' velocity goal, stopping motor");
-    stopMotor();
+    stopMotor(goal_pos, goal_speed, ros::Duration(0.5));
     return true;
   }
 
@@ -913,15 +953,14 @@ bool DynamixelDriver::writeDynamixelRegister(uint8_t id, uint16_t addr, uint8_t 
   {
     if (dynamixel_error != 0)
     {
-      std::string error_desc = packetHandler_->getRxPacketError(dynamixel_error);
-      ROS_ERROR("Write completed with error %s",error_desc.c_str());
+      ROS_ERROR_STREAM("Dynamixel [" << id << "] error: '" << packetHandler_->getRxPacketError(dynamixel_error) << "'");
       return false;
     }
     return true;
   }
   else
   {
-    ROS_ERROR("[ID] %u, Fail to write with error %u!", id, dynamixel_error);
+    ROS_ERROR_STREAM("Dynamixel [" << id << "] error: '" << packetHandler_->getTxRxResult(dynamixel_comm_result) << "'");
     return false;
   }
   return true;
@@ -958,8 +997,7 @@ bool DynamixelDriver::readDynamixelRegister(uint8_t id, uint16_t addr, uint8_t l
   {
     if (dynamixel_error != 0)
     {
-      std::string error_desc = packetHandler_->getRxPacketError(dynamixel_error);
-      ROS_ERROR("Write completed with error %s",error_desc.c_str());
+      ROS_INFO_STREAM("Dynamixel [" << id << "] error: '" << packetHandler_->getRxPacketError(dynamixel_error) << "'");
       return false;
     }
 
